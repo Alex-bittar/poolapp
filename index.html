@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pool Score Tracker - Firebase Edition</title>
+    
+    <!-- Firebase SDK (using v8.x for better compatibility) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --warning-color: #7209b7;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --gray-color: #6c757d;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background-color: #f5f7fa;
+            padding-bottom: 60px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1rem 0;
+            position: relative;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        button.secondary {
+            background-color: var(--success-color);
+        }
+        
+        button.secondary:hover {
+            background-color: #3aa8d9;
+        }
+        
+        button.danger {
+            background-color: var(--danger-color);
+        }
+        
+        button.danger:hover {
+            background-color: #d9184f;
+        }
+        
+        button.neutral {
+            background-color: var(--gray-color);
+        }
+        
+        button.neutral:hover {
+            background-color: #5a6268;
+        }
+        
+        button.small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .card-body {
+            padding: 15px;
+        }
+        
+        /* Original player card */
+        .player-card {
+            background-color: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 15px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .player-card.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(67, 97, 238, 0.3);
+        }
+        
+        .player-card.winning {
+            background-color: #ebfbff;
+        }
+        
+        /* Compact player card for game view */
+        .player-card-compact {
+            background-color: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .player-card-compact.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 5px rgba(67, 97, 238, 0.3);
+        }
+        
+        .player-card-compact.winning {
+            background-color: #ebfbff;
+        }
+        
+        .player-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .player-actions {
+            display: flex;
+            align-items: center;
+        }
+        
+        .active-badge {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .score {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--dark-color);
+            margin: 10px 0;
+            display: inline-block;
+        }
+        
+        .player-card-compact .score {
+            font-size: 20px;
+            margin: 0 0 0 15px;
+        }
+        
+        .player-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .player-card-compact .player-name {
+            font-size: 16px;
+            margin: 0;
+        }
+        
+        .player-order {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            margin-right: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        /* Game container layout */
+        .game-container {
+            max-height: calc(100vh - 180px);
+            overflow: hidden;
+        }
+        
+        .game-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        @media (min-width: 768px) {
+            .game-layout {
+                grid-template-columns: 300px 1fr;
+            }
+        }
+        
+        .player-column, .scoring-column {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+        }
+        
+        .player-cards-compact {
+            max-height: calc(100vh - 320px);
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        /* Compact scoring panels */
+        .scoring-grid {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .scoring-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        
+        .ball-btn.small {
+            height: 48px;
+            font-size: 16px;
+            padding: 5px;
+            border-radius: 8px;
+        }
+        
+        .special-actions {
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+        .special-actions-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--gray-color);
+        }
+        
+        .special-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .snooker-ball-btn.small {
+            height: 48px;
+            font-size: 12px;
+            padding: 5px;
+            border-radius: 8px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -15px;
+            margin-left: -15px;
+        }
+        
+        .col {
+            flex: 1 0 0%;
+            padding-right: 15px;
+            padding-left: 15px;
+        }
+        
+        .col-12 {
+            flex: 0 0 100%;
+            max-width: 100%;
+            padding-right: 15px;
+            padding-left: 15px;
+        }
+        
+        @media (min-width: 768px) {
+            .col-md-6 {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+            
+            .col-md-4 {
+                flex: 0 0 33.333333%;
+                max-width: 33.333333%;
+            }
+            
+            .col-md-3 {
+                flex: 0 0 25%;
+                max-width: 25%;
+            }
+        }
+        
+        .scoring-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .scoring-panel button {
+            height: 70px;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 0;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* Ball button colors */
+        .ball-btn {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            border: 2px solid #ddd;
+        }
+        
+        .ball-btn.red { background-color: #e74c3c; color: white; }
+        .ball-btn.yellow { background-color: #f1c40f; }
+        .ball-btn.green { background-color: #2ecc71; color: white; }
+        .ball-btn.brown { background-color: #795548; color: white; }
+        .ball-btn.blue { background-color: #3498db; color: white; }
+        .ball-btn.purple { background-color: #9b59b6; color: white; }
+        .ball-btn.orange { background-color: #e67e22; color: white; }
+        .ball-btn.pink { background-color: #e84393; color: white; }
+        .ball-btn.black { background-color: #000000; color: white; }
+        
+        /* Snooker ball colors */
+        .snooker-ball-btn.red { background-color: #e74c3c; color: white; }
+        .snooker-ball-btn.yellow { background-color: #f1c40f; color: black; }
+        .snooker-ball-btn.green { background-color: #2ecc71; color: white; }
+        .snooker-ball-btn.brown { background-color: #795548; color: white; }
+        .snooker-ball-btn.blue { background-color: #3498db; color: white; }
+        .snooker-ball-btn.pink { background-color: #e84393; color: white; }
+        .snooker-ball-btn.black { background-color: #000000; color: white; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow: auto;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        .modal-title {
+            margin-top: 0;
+            color: var(--dark-color);
+        }
+        
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            color: var(--gray-color);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom-color: var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 900;
+        }
+        
+        .bottom-nav button {
+            background: none;
+            border: none;
+            color: var(--gray-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .bottom-nav button.active {
+            color: var(--primary-color);
+        }
+        
+        .bottom-nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .firebase-badge {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: #FFCA28;
+            color: #111;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        
+        .firebase-badge:before {
+            content: "🔥";
+            margin-right: 5px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .stat-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+        }
+        
+        .stat-title {
+            color: var(--gray-color);
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        .stat-secondary {
+            font-size: 14px;
+            color: var(--gray-color);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--gray-color);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Firebase Badge -->
+    <div class="firebase-badge">Firebase Edition</div>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <h2>Loading Pool Score Tracker...</h2>
+        <p>Please wait while the application connects to Firebase.</p>
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- Main App Container (initially hidden) -->
+    <div id="app" style="display: none;">
+        <header>
+            <div class="container">
+                <h1>Pool Score Tracker</h1>
+            </div>
+        </header>
+        
+        <div class="container" style="padding-top: 20px;">
+            <!-- Tab Navigation -->
+            <div class="tabs">
+                <div class="tab active" data-tab="game">Game</div>
+                <div class="tab" data-tab="profiles">Profiles</div>
+                <div class="tab" data-tab="stats">Stats</div>
+            </div>
+            
+            <!-- Game Tab -->
+            <div class="tab-content active" id="game-tab">
+                <div id="game-view">
+                    <!-- Content will be dynamically generated -->
+                </div>
+            </div>
+            
+            <!-- Profiles Tab -->
+            <div class="tab-content" id="profiles-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3>Player Profiles</h3>
+                            <button id="create-profile-btn" class="secondary">Create New Profile</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="profiles-list">
+                            <!-- Profiles will be dynamically generated -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Tab -->
+            <div class="tab-content" id="stats-tab">
+                <div id="stats-view">
+                    <!-- Stats content will be dynamically generated -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- New Game Modal -->
+    <div id="new-game-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">New Game</h3>
+            <form id="new-game-form">
+                <div class="form-group">
+                    <label for="game-name">Game Name:</label>
+                    <input type="text" id="game-name" class="form-control" placeholder="Optional name for this game">
+                </div>
+                
+                <div class="form-group">
+                    <label for="game-mode">Game Mode:</label>
+                    <select id="game-mode" class="form-control">
+                        <option value="standard">Standard (Balls 1-15)</option>
+                        <option value="snooker">Snooker</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="target-score">Target Score:</label>
+                    <input type="number" id="target-score" class="form-control" value="100" min="1">
+                </div>
+                
+                <div class="form-group" id="players-container">
+                    <label>Players:</label>
+                    <button type="button" id="add-player-btn" class="secondary" style="margin-bottom: 10px;">+ Add Player</button>
+                    
+                    <div class="player-input">
+                        <div class="row" style="margin-bottom: 10px;">
+                            <div class="col">
+                                <select class="player-profile-select form-control">
+                                    <option value="">Select a profile...</option>
+                                    <!-- Profiles loaded dynamically -->
+                                </select>
+                            </div>
+                            <div class="col">
+                                <input type="text" class="new-player-input form-control" placeholder="Or enter player name">
+                            </div>
+                            <div style="width: 40px; padding-left: 5px;">
+                                <button type="button" class="remove-player-btn danger" style="display: none; padding: 8px; width: 30px; height: 30px; line-height: 1;">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="player-input">
+                        <div class="row" style="margin-bottom: 10px;">
+                            <div class="col">
+                                <select class="player-profile-select form-control">
+                                    <option value="">Select a profile...</option>
+                                    <!-- Profiles loaded dynamically -->
+                                </select>
+                            </div>
+                            <div class="col">
+                                <input type="text" class="new-player-input form-control" placeholder="Or enter player name">
+                            </div>
+                            <div style="width: 40px; padding-left: 5px;">
+                                <button type="button" class="remove-player-btn danger" style="display: none; padding: 8px; width: 30px; height: 30px; line-height: 1;">×</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" id="cancel-new-game-btn" class="neutral">Cancel</button>
+                    <button type="button" id="start-game-btn" class="primary">Start Game</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Game History Modal -->
+    <div id="game-history-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">Game History</h3>
+            <div id="game-history-content">
+                <!-- Game history content will be dynamically generated -->
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button id="close-history-btn" class="neutral">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Results Modal -->
+    <div id="game-results-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">Game Results</h3>
+            <div id="game-results-content">
+                <!-- Game results content will be dynamically generated -->
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button id="new-game-from-results-btn" class="secondary">New Game</button>
+                <button id="close-results-btn" class="neutral">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Profile Modal -->
+    <div id="edit-profile-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title" id="edit-profile-title">Create Player Profile</h3>
+            <form id="edit-profile-form">
+                <input type="hidden" id="edit-profile-id">
+                <div class="form-group">
+                    <label for="profile-first-name">First Name:</label>
+                    <input type="text" id="profile-first-name" class="form-control" placeholder="First Name" required>
+                </div>
+                <div class="form-group">
+                    <label for="profile-last-name">Last Name:</label>
+                    <input type="text" id="profile-last-name" class="form-control" placeholder="Last Name" required>
+                </div>
+                <div class="form-group">
+                    <label for="profile-nickname">Nickname:</label>
+                    <input type="text" id="profile-nickname" class="form-control" placeholder="Nickname (optional)">
+                </div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" id="cancel-edit-profile-btn" class="neutral">Cancel</button>
+                    <button type="button" id="save-profile-btn" class="primary">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Delete Profile Modal -->
+    <div id="delete-profile-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">Delete Player Profile</h3>
+            <p>Are you sure you want to delete <span id="delete-profile-name"></span>? This action cannot be undone.</p>
+            <input type="hidden" id="delete-profile-id">
+            <div style="margin-top: 20px; text-align: right;">
+                <button type="button" id="cancel-delete-profile-btn" class="neutral">Cancel</button>
+                <button type="button" id="confirm-delete-profile-btn" class="danger">Delete Profile</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Custom Points Modal -->
+    <div id="custom-points-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">Add Custom Points</h3>
+            <div class="form-group">
+                <label for="custom-points">Points to add:</label>
+                <input type="number" id="custom-points" class="form-control" value="0">
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button type="button" id="cancel-custom-points-btn" class="neutral">Cancel</button>
+                <button type="button" id="add-custom-points-btn" class="primary">Add Points</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="complete-firebase-version.js"></script>
+</body>
+</html>
