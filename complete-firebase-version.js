@@ -332,7 +332,7 @@ async function checkForActiveGame() {
 function renderEmptyGameState() {
   gameView.innerHTML = `
     <div class="empty-state">
-      <div class="empty-state-icon">🎱</div>
+      <div class="empty-state-icon">ðŸŽ±</div>
       <h3>No Active Game</h3>
       <p>Start a new game to begin tracking scores!</p>
       <button id="show-new-game-btn" class="secondary">Start New Game</button>
@@ -1869,7 +1869,7 @@ function showGameResults() {
           <div>
             <span class="player-order">${index + 1}</span>
             <span class="player-name">${player.name}</span>
-            ${isWinner ? '<span style="margin-left: 10px; color: gold;">🏆 Winner</span>' : ''}
+            ${isWinner ? '<span style="margin-left: 10px; color: gold;">ðŸ† Winner</span>' : ''}
           </div>
           <div class="score">${player.score || 0}</div>
         </div>
@@ -2032,7 +2032,7 @@ function showGameDetails(gameId) {
           <div>
             <span class="player-order">${index + 1}</span>
             <span class="player-name">${player.name}</span>
-            ${isWinner ? '<span style="margin-left: 10px; color: gold;">🏆 Winner</span>' : ''}
+            ${isWinner ? '<span style="margin-left: 10px; color: gold;">ðŸ† Winner</span>' : ''}
           </div>
           <div class="score">${player.score || 0}</div>
         </div>
@@ -2108,7 +2108,7 @@ function addPlayerInput() {
         <input type="text" class="new-player-input form-control" placeholder="Or enter player name">
       </div>
       <div style="width: 40px; padding-left: 5px;">
-        <button type="button" class="remove-player-btn danger" style="padding: 8px; width: 30px; height: 30px; line-height: 1;">×</button>
+        <button type="button" class="remove-player-btn danger" style="padding: 8px; width: 30px; height: 30px; line-height: 1;">Ã—</button>
       </div>
     </div>
   `;
