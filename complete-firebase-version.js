@@ -650,7 +650,7 @@ function renderSnookerScoringPanel() {
       <div class="scoring-row">
         <button class="snooker-ball-btn black small" data-points="7" data-color="black">Black (7)</button>
         <button class="snooker-special-btn small" data-action="reset-to-zero">Reset to 0</button>
-        <button class="snooker-special-btn small" data-action="penalty-to-opponent">Add Penalty (4)</button>
+        <button class="snooker-special-btn small" data-action="penalty-to-opponent">Add Penalty (7)</button>
       </div>
     </div>
   `;
