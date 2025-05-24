@@ -1689,8 +1689,8 @@ function addSnookerPenaltyToOpponent() {
   const opponent = appState.players.find(p => p.id !== appState.activePlayerId);
   if (!opponent) return;
   
-  // Add penalty of 4 points
-  addPointsToPlayer(opponent.id, 4, 'penalty');
+  // Add penalty of 7 points
+  addPointsToPlayer(opponent.id, 7, 'penalty');
 }
 
 // Record an action for undo
